@@ -8,7 +8,7 @@
 
 import UIKit
 
-class HomeViewController: UIViewController {
+class RecordSoundViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()

@@ -8,7 +8,7 @@
 
 import UIKit
 
-class SoundPlayerViewController: UIViewController {
+class PlaySoundViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
