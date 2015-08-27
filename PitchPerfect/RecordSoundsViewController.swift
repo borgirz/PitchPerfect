@@ -114,30 +114,36 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         // Start flashing animation for the record button (From CustomViewAnimationsFunctions.swift)
         flashViewWithFadingTransition(btnRecord)
         
-        
         // Setup and start an audio session
         var audioSession = AVAudioSession.sharedInstance()
         audioSession.setCategory(AVAudioSessionCategoryPlayAndRecord, error: nil)
         
+        // Setup recorder for m4a file format. Source :
+        // TODO: Source
+        var recordSettings = [
+            AVFormatIDKey: kAudioFormatMPEG4AAC,
+            AVEncoderAudioQualityKey : AVAudioQuality.Medium.rawValue,
+            AVEncoderBitRateKey : 320000,
+            AVNumberOfChannelsKey: 2,
+            AVSampleRateKey : 44100.0
+        ]
+        
         // Assign new path to the recorder (re)initialise it
-        audioRecorder = AVAudioRecorder(URL: newFilePathBasedOnCurrentTime(), settings: nil, error: nil)
+        audioRecorder = AVAudioRecorder(URL: newFilePathBasedOnCurrentTime(), settings: recordSettings as [NSObject : AnyObject], error: nil)
         
         
-        
-        //////////ICICICICICI
-        
-        
-        // if the audio recorder still exists
+        // If the audio recorder still exists : No errors
         if let audioRecorder = audioRecorder{
             
-            // record
-            audioRecorder.delegate = self
+            // Record
+            audioRecorder.delegate = self // To be able to use audioRecorderDidFinishRecording delegate method
             audioRecorder.meteringEnabled = true
             audioRecorder.prepareToRecord()
             audioRecorder.record()
             
-            // start timer
-            timer = NSTimer.scheduledTimerWithTimeInterval(1, target:self, selector: Selector("updateCounter"), userInfo: nil, repeats: true)
+            // Start timer - Perform updateCounterLabel() every second
+            // TODO: Source
+            timer = NSTimer.scheduledTimerWithTimeInterval(1, target:self, selector: Selector("updateCounterLabel"), userInfo: nil, repeats: true)
         }
 
     }
@@ -145,28 +151,28 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     
     @IBAction func stopRecording(sender: UIButton) {
         
-        //Stop recording
+        // If the recorder still exists
         if let audioRecorder = audioRecorder{
             
             // Stop recording
             audioRecorder.stop()
             
-            // Stop the counter
+            // Stop the timer
             timer.invalidate()
             
-            //Stop all animation for record button
+            // Stop all animations for record button
             stopAllAnimations(btnRecord)
             
-            // desactivate the audio session
+            // Desactivate the audio session
             var audioSession = AVAudioSession.sharedInstance()
             audioSession.setActive(false, error: nil)
-            
         }
     }
     
     
     @IBAction func pauseRecording(sender: UIButton) {
         
+        // If the recorder still exists
         if let audioRecorder = audioRecorder{
             
             // Pause recording
@@ -175,16 +181,16 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             // Pause the timer
             timer.invalidate()
             
-            //Disable pause button"
+            // Disable pause button"
             btnPause.enabled = false
             
-            //Enable resume button"
+            // Enable resume button"
             btnResume.enabled = true
             
-            //Change Recording status label
+            // Change Recording status label
             lblRecordingStatus.text = "Record in pause"
             
-            //Stop All Animation for record button & Set opacity to 0.5
+            // Stop All Animation for record button & Set opacity to 0.5
             stopAllAnimations(btnRecord)
             btnRecord.alpha = 0.5
             
@@ -194,93 +200,110 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     
     @IBAction func resumeRecording(sender: UIButton) {
         
+        // If the recorder still exists
         if let audioRecorder = audioRecorder{
             
             // Resume recording
             audioRecorder.record()
             
-            timer = NSTimer.scheduledTimerWithTimeInterval(1, target:self, selector: Selector("updateCounter"), userInfo: nil, repeats: true) //resume timer
+            // Restart (resume) timer - Perform updateCounterLabel() every second
+            timer = NSTimer.scheduledTimerWithTimeInterval(1, target:self, selector: Selector("updateCounterLabel"), userInfo: nil, repeats: true)
             
-            //Disable resume button
+            // Disable resume button
             btnResume.enabled = false
             
-            //Enable pause button
+            // Enable pause button
             btnPause.enabled = true
             
-            //Change Recording status label
+            // Change Recording status label
             lblRecordingStatus.text = "Record in progress..."
             
-            //Start flashing animation for the record button
+            // Start flashing animation for the record button
             flashViewWithFadingTransition(btnRecord)
             
         }
     }
  
-    //MARK: recorder delagated functions
+    
+    
+    // MARK: Recorder delagated functions
+    // **********************************
     
     // Is triggered when the audio recorder finishes the recording. Perform the segue to PlaySoundsViewController
     func audioRecorderDidFinishRecording(recorder: AVAudioRecorder!, successfully flag: Bool) {
         
-        if(flag){ //if record is successfull
+        // If the recording is successfull
+        if(flag){
             
-            // Save the recorded audio
+            // Create a new audio "file" which target the recorded file
             recordedAudioFile = AVAudioFile(forReading: recorder.url, error: nil)
             
-            // Move to the next scene aka perform segue
-            // Segue to PlaySoundsViewController
+            // Perfor segue to PlaySoundsViewController
             self.performSegueWithIdentifier("gotoPlaySoundsViewController", sender: recordedAudioFile)
         }
+            
+        // If the recording is unsuccessfull
         else{
             
-            // Popup an alert
+            // Popup an alert message
             var alert = UIAlertController(title: "Error", message: "Recording fails due to an unknown error", preferredStyle: UIAlertControllerStyle.Alert)
             alert.addAction(UIAlertAction(title: "Ok", style: UIAlertActionStyle.Default, handler: nil))
             self.presentViewController(alert, animated: true, completion: nil)
             
-            // Reset UI to initial state
+            // Reset UI to its initial state
             self.viewWillAppear(false)
-
         }
-
     }
     
-    //MARK: Custom functions
+    
+    
+    // MARK: Custom functions
+    // **********************
     
     // Return a new unique file path based on the current date/time
     func newFilePathBasedOnCurrentTime() -> NSURL!{
         let currentDateTime = NSDate()
         var formatter = NSDateFormatter()
         formatter.dateFormat = "ddMMyyyy-HHmmss"
-        //TODO : change sound format
-        let recordingName = "PitchPerfect_"+formatter.stringFromDate(currentDateTime)+".wav"
+        let recordingName = "PitchPerfect_"+formatter.stringFromDate(currentDateTime)+".m4a"
         let pathArray = [userDocumentFolderPath, recordingName]
         return NSURL.fileURLWithPathComponents(pathArray)
     }
     
     // Update the timer label based on counter value
-    func updateCounter() {
+    func updateCounterLabel() {
         ++counter
         var tempCounterTxt = ""
+        
+        // Minutes
         tempCounterTxt +=  "\(counter/60)"
         tempCounterTxt +=  ":"
         
-        // add a "0" if seconds are < 10
+        // Add a "0" if seconds are < 10
         if ((counter%60) < 10){
             tempCounterTxt += "0"
         }
+        
+        // Seconds
         tempCounterTxt += "\(counter%60)"
         lblTimer.text = tempCounterTxt
     }
     
-    //MARK: Prepare for Segue
+    
+    
+    // MARK: Prepare for Segue
+    // **********************
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         
-        // gotoPlaySoundsViewController Segue
+        // If manual segue is "gotoPlaySoundsViewController"
         if (segue.identifier == "gotoPlaySoundsViewController"){
+            
+            // Define the new controller and pass the audiofile as external parameter
             let playSoundVC:PlaySoundsViewController = segue.destinationViewController as! PlaySoundsViewController
             let data = sender as! AVAudioFile?
             playSoundVC.audioFile = data
         }
     }
-
 }
+
+// EOF

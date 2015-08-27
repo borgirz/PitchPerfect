@@ -194,29 +194,42 @@ class PlaySoundsViewController: UIViewController {
         
         audioPlayerNode.stop()
         
-        audioPlayerNode.scheduleFile(audioFile, atTime: nil, completionHandler: stopPlayingHandler)
+        let buffer = AVAudioPCMBuffer(PCMFormat: audioFile!.processingFormat, frameCapacity: AVAudioFrameCount(audioFile!.length))
+        
+        //audioFile?.readIntoBuffer(buffer, error: nil)
+        
+        let buffer2 = AVAudioPCMBuffer(PCMFormat: audioFile!.processingFormat, frameCapacity: AVAudioFrameCount(audioFile!.length))
+        
+        audioFile?.readIntoBuffer(buffer2, error: nil)
+        
+        //audioPlayerNode.scheduleBuffer(buffer, atTime: nil, options: nil, completionHandler: nil)
+        audioPlayerNode.scheduleBuffer(buffer2, atTime: nil, options: .interrupt, completionHandler:  audioPlayerNode.play)
         audioEngine.startAndReturnError(nil)
         
         audioPlayerNode.play()
+        
         
     }
 
     
     func stopPlayingHandler(){
-//        
-//        // Stop the audio Engine
-//        audioEngine.stop()
-//        
-//        //disable stop button
-//        btnStop.enabled = false
-//        btnStop.hidden = true
-//        
-//        //Stop flashing animation on playing status label & set opacity to 1.0
-//        stopAllAnimations(lblPlayingStatus)
-//        lblPlayingStatus.alpha = 1.0
-//        
-//        //Change Playing status label
-//        lblPlayingStatus.text = "Select your effect !"
+       /*
+        // Stop the audio Engine
+        audioEngine.stop()
+        
+        dispatch_async(dispatch_get_main_queue(), {
+            //disable stop button
+            self.btnStop.enabled = false
+            self.btnStop.hidden = true
+            
+            //Stop flashing animation on playing status label & set opacity to 1.0
+            stopAllAnimations(self.lblPlayingStatus)
+            self.lblPlayingStatus.alpha = 1.0
+            
+            //Change Playing status label
+            self.lblPlayingStatus.text = "Select your effect !"
+        })
+        */
     }
     
 }
