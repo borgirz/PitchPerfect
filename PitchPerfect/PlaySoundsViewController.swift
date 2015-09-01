@@ -10,59 +10,70 @@ import UIKit
 import AVFoundation
 
 class PlaySoundsViewController: UIViewController {
-
+    
     
     // MARK: Properties
     // ****************
     
     // Audio file - external from segue
     var audioFile:AVAudioFile?
-    
+
     // Audio engine & player node
-    var audioEngine:AVAudioEngine! // Will be reinitialised on each reading
-    let audioPlayerNode: AVAudioPlayerNode = AVAudioPlayerNode() // Will never change
+    var audioEngine:AVAudioEngine?
+    var audioPlayerNode: AVAudioPlayerNode?
+
+    var buffer : AVAudioPCMBuffer!
     
-    // Array of audio nodes that should be inserted between the player node and the output node
-    var chainOfNodes = [AVAudioNode]()
+    var chainOfNodes: [AVAudioNode] = []
     
+    // Counter incremented each time the user is pressing an effect button an decremented when a file finish reading (or is interrupted)
+    var playingCounter = 0
     
     
     // MARK: Outlets
     // **************
     
+    
     @IBOutlet weak var lblPlayingStatus: UILabel!
     @IBOutlet weak var btnStop: UIButton!
     
+    @IBOutlet var btnsEffect: [UIButton]!
     
     
     // MARK: ViewController Lifecycle
     // ******************************
     
     override func viewDidLoad() {
+        
         super.viewDidLoad()
+        
+        audioEngine = AVAudioEngine()
+        createAudioPlayerNodeAndAttachItToAudioEngine()
+        
+        buffer = AVAudioPCMBuffer(PCMFormat: audioFile!.processingFormat, frameCapacity: AVAudioFrameCount(audioFile!.length))
+        audioFile?.readIntoBuffer(buffer, error: nil)
+
+    }
+    
+    override func viewWillDisappear(animated: Bool) {
+        
+        stopPlaying(true)
+        deleteAudioEngine()
+        buffer = nil
+
+
     }
     
     override func viewWillAppear(animated: Bool) {
         
-        // Set UI Objects to their initial status
-        // --------------------------------------
-        
-        // Set "initial" values
-        lblPlayingStatus.text = "Select your effect !" //re-initialise status
-        
-        // Enable-Disable interractive outlet(s) (Buttons, text fields, ...)
-        // @ Enabled
-        btnStop.enabled = true
-        
-        // Show-Hide outlet(s)
-        // @ Hidden
-        btnStop.hidden = true
+        resetUIToInitialState()
     }
-
+    
     
     @IBAction func playSlow(sender: UIButton) {
         
         playSoundWithEffects("Playing... Slow",speedRate: 0.5,pitch: 1200, reverb: nil, echo: nil)
+
     }
     
     @IBAction func playFast(sender: UIButton) {
@@ -73,7 +84,7 @@ class PlaySoundsViewController: UIViewController {
     @IBAction func playChipmunk(sender: UIButton) {
         
         playSoundWithEffects("Playing... Chipmunk",speedRate: nil,pitch: 1000, reverb: nil, echo: nil)
-
+        
     }
     
     @IBAction func playDarthVador(sender: UIButton) {
@@ -85,70 +96,69 @@ class PlaySoundsViewController: UIViewController {
         
         playSoundWithEffects("Playing... Echo",speedRate: nil,pitch: nil, reverb: nil, echo: 0.7)
     }
-
+    
     @IBAction func playReverb(sender: UIButton) {
         
         playSoundWithEffects("Playing... Reverb",speedRate: nil,pitch: nil, reverb: 50, echo: nil)
     }
     
     @IBAction func stop(sender: UIButton?) {
-        
-        // Stop the audio Engine
-        audioEngine.stop()
-        
-        //disable stop button
-        btnStop.enabled = false
-        btnStop.hidden = true
-        
-        //Stop flashing animation on playing status label & set opacity to 1.0
-        stopAllAnimations(lblPlayingStatus)
-        lblPlayingStatus.alpha = 1.0
-        
-        //Change Playing status label
-        lblPlayingStatus.text = "Select your effect !"
+
+        stopPlaying(true)
         
     }
     
-    
-    func resetAudioEngine() -> Void{
-        
-        if let audioEngine = audioEngine{
-            audioEngine.stop()
-        }
-        while(chainOfNodes.count != 0){
-            var node = chainOfNodes.removeLast()
-            audioEngine.detachNode(node)
-        }
+    func deleteAudioEngine(){
+        cleanAudioEngine()
         audioEngine = nil
     }
     
-    func playSoundWithEffects(message: String, speedRate: Float?, pitch: Float?, reverb: Float?, echo: Float?) -> Void {
+    
+    func cleanAudioEngine() -> Void{
         
-        var speedRate = speedRate
+        audioPlayerNode?.stop()
+        audioEngine?.stop()
         
+        audioEngine?.disconnectNodeOutput(audioPlayerNode)
+        audioEngine?.detachNode(audioPlayerNode)
         
-        // Enable stop button
-        btnStop.enabled = true
-        btnStop.hidden = false
+        cleanChainOfNodes()
         
-        // Stop flashing animation on playing status
-        stopAllAnimations(lblPlayingStatus)
+        audioPlayerNode = nil
+    }
+    
+    func resetAudioEngine() -> Void{
+        cleanAudioEngine()
+        createAudioPlayerNodeAndAttachItToAudioEngine()
+    }
+    
+    func createAudioPlayerNodeAndAttachItToAudioEngine() -> Void{
+
+        audioPlayerNode = AVAudioPlayerNode()
+        audioEngine?.attachNode(audioPlayerNode)
+    }
+    
+    func cleanChainOfNodes() -> Void{
+    
+        for node in chainOfNodes{
+            audioEngine?.disconnectNodeOutput(node)
+            audioEngine?.detachNode(node)
+        }
+    
+        while(chainOfNodes.count != 0){
+            var node = chainOfNodes.removeLast()
+        }
+    }
+    
+    func playSoundWithEffects(message: String, speedRate: Float?, pitch: Float?, reverb: Float?, echo: Float?) -> Void{
         
-        // Set playing status message
-        lblPlayingStatus.text = message
+        playingCounter++
         
-        // Start flashing animation for the playing status label
-        flashViewWithFadingTransition(lblPlayingStatus)
-        
-        
-        //TODO: Reset Audio Engine
+    /// Reset AudioEngine
         resetAudioEngine()
         
-        audioEngine = AVAudioEngine()
-        audioEngine.attachNode(audioPlayerNode)
         
-        
-        
+    /// Create effect nodes
         if let pitchLevel = pitch{
             let pitchEffectNode = AVAudioUnitTimePitch()
             pitchEffectNode.pitch = pitchLevel
@@ -161,7 +171,6 @@ class PlaySoundsViewController: UIViewController {
             chainOfNodes.append(changeSpeedEffectNode)
         }
         
-        
         if let wetDryMixLevel = reverb{
             let reverbEffectNode = AVAudioUnitReverb()
             reverbEffectNode.wetDryMix = wetDryMixLevel
@@ -173,63 +182,110 @@ class PlaySoundsViewController: UIViewController {
             echoEffectNode.delayTime = NSTimeInterval(echoLevel)
             chainOfNodes.append(echoEffectNode)
         }
-        
+
+    /// Attach Nodes
         
         for node in chainOfNodes{
-            audioEngine.attachNode(node)
+            audioEngine?.attachNode(node)
         }
+        
+    /// Connect Nodes (audioPlayerNode -> ChainOfNodes -> audioEngine.outputNode)
         
         if chainOfNodes.count != 0{
             var index = 0
-            audioEngine.connect(audioPlayerNode, to: chainOfNodes[index], format: nil)
+            audioEngine?.connect(audioPlayerNode, to: chainOfNodes[index], format: nil)
             while(index < chainOfNodes.count-1){
-                audioEngine.connect(chainOfNodes[index], to: chainOfNodes[++index], format: nil)
+                println("loop")
+                audioEngine?.connect(chainOfNodes[index], to: chainOfNodes[++index], format: nil)
             }
-            audioEngine.connect(chainOfNodes[index], to: audioEngine.outputNode, format: nil)
+            audioEngine?.connect(chainOfNodes[index], to: audioEngine?.outputNode, format: nil)
         }
         else{
-            audioEngine.connect(audioPlayerNode, to: audioEngine.outputNode, format: nil)
+            audioEngine?.connect(audioPlayerNode, to: audioEngine?.outputNode, format: nil)
         }
         
+    /// Start Audio Session
         
-        audioPlayerNode.stop()
+        var audioSession = AVAudioSession.sharedInstance()
+        audioSession.setCategory(AVAudioSessionCategoryPlayback, error: nil)
         
-        let buffer = AVAudioPCMBuffer(PCMFormat: audioFile!.processingFormat, frameCapacity: AVAudioFrameCount(audioFile!.length))
-        
-        //audioFile?.readIntoBuffer(buffer, error: nil)
-        
-        let buffer2 = AVAudioPCMBuffer(PCMFormat: audioFile!.processingFormat, frameCapacity: AVAudioFrameCount(audioFile!.length))
-        
-        audioFile?.readIntoBuffer(buffer2, error: nil)
-        
-        //audioPlayerNode.scheduleBuffer(buffer, atTime: nil, options: nil, completionHandler: nil)
-        audioPlayerNode.scheduleBuffer(buffer2, atTime: nil, options: .interrupt, completionHandler:  audioPlayerNode.play)
-        audioEngine.startAndReturnError(nil)
-        
-        audioPlayerNode.play()
-        
+    /// Start the audioEngine
+         audioEngine?.startAndReturnError(nil)
+    
+    /// Schedule the buffer and start playing
+        audioPlayerNode?.scheduleBuffer(buffer, atTime: nil, options: .Interrupts, completionHandler: stopPlayingHandler)
+        audioPlayerNode?.play()
+
+        /// Start Animation
+        updateUIForPlaying(message)
+        //changeEffectsButtonsToEnabledStatus(false)
         
     }
-
+    
     
     func stopPlayingHandler(){
-       /*
-        // Stop the audio Engine
-        audioEngine.stop()
         
+        playingCounter--
         dispatch_async(dispatch_get_main_queue(), {
-            //disable stop button
-            self.btnStop.enabled = false
-            self.btnStop.hidden = true
-            
-            //Stop flashing animation on playing status label & set opacity to 1.0
-            stopAllAnimations(self.lblPlayingStatus)
-            self.lblPlayingStatus.alpha = 1.0
-            
-            //Change Playing status label
-            self.lblPlayingStatus.text = "Select your effect !"
+
+            if self.playingCounter == 0{
+                self.stopPlaying(false)
+            }
         })
-        */
     }
     
+    func updateUIForPlaying(labelText: String){
+        // Enable stop button
+        btnStop.enabled = true
+        btnStop.hidden = false
+        
+        // Stop flashing animation on playing status
+        stopAllAnimations(lblPlayingStatus)
+        
+        // Set playing status text
+        lblPlayingStatus.text = labelText
+        
+        // Start flashing animation for the playing status label
+        flashViewWithFadingTransition(lblPlayingStatus)
+    }
+    
+    func resetUIToInitialState(){
+        
+        //disable stop button
+        btnStop.enabled = false
+        btnStop.hidden = true
+        
+        //Stop flashing animation on playing status label & set opacity to 1.0
+        stopAllAnimations(self.lblPlayingStatus)
+        lblPlayingStatus.alpha = 1.0
+        
+        //Change Playing status label
+        lblPlayingStatus.text = "Select your effect !"
+        
+        changeEffectsButtonsToEnabledStatus(true)
+    }
+    
+    func changeEffectsButtonsToEnabledStatus(status: Bool){
+        for button in btnsEffect{
+            button.enabled = status
+        }
+    }
+    
+    // Stop playing and restore UI to initial state, if needed, stop the engine too (for stop button, other effect, like echo will continue playing if stopEngine=false)
+    func stopPlaying(stopEngine: Bool){
+        
+        audioPlayerNode?.stop()
+        
+        if stopEngine{
+            audioEngine?.stop()
+        }
+        
+        var audioSession = AVAudioSession.sharedInstance()
+        audioSession.setActive(false, error: nil)
+        
+        resetUIToInitialState()
+    }
 }
+
+// EOF
+

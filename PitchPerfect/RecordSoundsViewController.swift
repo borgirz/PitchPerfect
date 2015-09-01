@@ -9,23 +9,20 @@
 import UIKit
 import AVFoundation
 
-class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
+final class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
 
     // MARK: Properties
     // ****************
     
     // User's document directory
-    let userDocumentFolderPath = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String
+    let userDocumentFolderPath: NSString = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true)[0] as! String
     
     // Recorder
     var audioRecorder: AVAudioRecorder?
     
-    // Audio file => For segue
-    var recordedAudioFile: AVAudioFile?
-    
     // Timer variables to display recorded time
-    var timer = NSTimer()
-    var counter : Int = 0
+    var timer: NSTimer = NSTimer()
+    var counter: Int = 0
     
     
     
@@ -51,42 +48,12 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         // Source : http://stackoverflow.com/questions/7542950/how-do-you-change-uibutton-image-alpha-on-disabled-state
         
         btnRecord.setBackgroundImage(btnRecord.imageView?.image, forState: UIControlState.Disabled)
-        
     }
 
     override func viewWillAppear(animated: Bool) {
         
-        // Set UI Objects to their initial status
-        // --------------------------------------
-        
-        // Set "initial" values
-        lblTimer.text = "00:00"                     // Re-initialise timer
-        lblRecordingStatus.text = "Tap to record !" // Re-initialise status
-        btnRecord.alpha = 1.0                       // Re-initialise record button opacity
-        counter = 0                                 // Re-initialise the counter
-        lblTimer.text = "0:00"                      // Set timer label to default value
-        
-        
-        // Enable-Disable interractive outlet(s) (Buttons, text fields, ...)
-        // @ Enabled
-        btnRecord.enabled = true
-        btnPause.enabled = true
-        btnStop.enabled = true
-        // @ Disabled
-        btnResume.enabled = false
-        
-        
-        // Show-Hide outlet(s)
-        // @ Visible
-        btnRecord.hidden = false
-        lblRecordingStatus.hidden = false
-        // @ Hidden
-        lblTimer.hidden = true
-        btnPause.hidden = true
-        btnStop.hidden = true
-        btnResume.hidden = true
-        
-        
+        // Set UI Elements to their initial state
+        resetUIElements()
     }
     
     
@@ -116,11 +83,11 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         
         // Setup and start an audio session
         var audioSession = AVAudioSession.sharedInstance()
-        audioSession.setCategory(AVAudioSessionCategoryPlayAndRecord, error: nil)
+        audioSession.setCategory(AVAudioSessionCategoryRecord, error: nil)
         
-        // Setup recorder for m4a file format. Source :
-        // TODO: Source
-        var recordSettings = [
+        // Setup recorder for m4a file format.
+        // Source : http://stackoverflow.com/questions/27809475/avaudiorecorder-recording-m4a-files-that-are-very-large
+        let recordSettings = [
             AVFormatIDKey: kAudioFormatMPEG4AAC,
             AVEncoderAudioQualityKey : AVAudioQuality.Medium.rawValue,
             AVEncoderBitRateKey : 320000,
@@ -129,12 +96,12 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         ]
         
         // Assign new path to the recorder (re)initialise it
-        audioRecorder = AVAudioRecorder(URL: newFilePathBasedOnCurrentTime(), settings: recordSettings as [NSObject : AnyObject], error: nil)
+        audioRecorder = AVAudioRecorder(URL: newFilePathBasedOnCurrentTime(), settings: recordSettings as [NSObject: AnyObject], error: nil)
         
         
         // If the audio recorder still exists : No errors
         if let audioRecorder = audioRecorder{
-            
+    
             // Record
             audioRecorder.delegate = self // To be able to use audioRecorderDidFinishRecording delegate method
             audioRecorder.meteringEnabled = true
@@ -142,10 +109,9 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             audioRecorder.record()
             
             // Start timer - Perform updateCounterLabel() every second
-            // TODO: Source
-            timer = NSTimer.scheduledTimerWithTimeInterval(1, target:self, selector: Selector("updateCounterLabel"), userInfo: nil, repeats: true)
+            // Source: https://github.com/UrbanApps/UAProgressView/issues/5
+            timer = NSTimer.scheduledTimerWithTimeInterval(1, target: self, selector: Selector("updateCounterLabel"), userInfo: nil, repeats: true)
         }
-
     }
     
     
@@ -164,7 +130,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             stopAllAnimations(btnRecord)
             
             // Desactivate the audio session
-            var audioSession = AVAudioSession.sharedInstance()
+            let audioSession = AVAudioSession.sharedInstance()
             audioSession.setActive(false, error: nil)
         }
     }
@@ -193,9 +159,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             // Stop All Animation for record button & Set opacity to 0.5
             stopAllAnimations(btnRecord)
             btnRecord.alpha = 0.5
-            
         }
-        
     }
     
     @IBAction func resumeRecording(sender: UIButton) {
@@ -207,7 +171,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             audioRecorder.record()
             
             // Restart (resume) timer - Perform updateCounterLabel() every second
-            timer = NSTimer.scheduledTimerWithTimeInterval(1, target:self, selector: Selector("updateCounterLabel"), userInfo: nil, repeats: true)
+            timer = NSTimer.scheduledTimerWithTimeInterval(1, target: self, selector: Selector("updateCounterLabel"), userInfo: nil, repeats: true)
             
             // Disable resume button
             btnResume.enabled = false
@@ -220,7 +184,6 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
             
             // Start flashing animation for the record button
             flashViewWithFadingTransition(btnRecord)
-            
         }
     }
  
@@ -235,23 +198,24 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
         // If the recording is successfull
         if(flag){
             
-            // Create a new audio "file" which target the recorded file
-            recordedAudioFile = AVAudioFile(forReading: recorder.url, error: nil)
+            // Create a new audio "file" which target the recorded file -- a bit redundant as I could have created the AVAudioFile directly with its own initialiser, but likethis it uses the new class and a custom initialiser to follow code improvements directives
+            let recordedAudioFile: AVAudioFile = RecordedAudio(filePathUrl: recorder.url).asAVAudioFile()
             
-            // Perfor segue to PlaySoundsViewController
-            self.performSegueWithIdentifier("gotoPlaySoundsViewController", sender: recordedAudioFile)
+            // Perform segue to PlaySoundsViewController
+            performSegueWithIdentifier("gotoPlaySoundsViewController", sender: recordedAudioFile)
         }
             
         // If the recording is unsuccessfull
         else{
             
             // Popup an alert message
+            // TODO : http://stackoverflow.com/questions/28137259/how-do-i-code-an-uialertaction-in-swift
             var alert = UIAlertController(title: "Error", message: "Recording fails due to an unknown error", preferredStyle: UIAlertControllerStyle.Alert)
             alert.addAction(UIAlertAction(title: "Ok", style: UIAlertActionStyle.Default, handler: nil))
-            self.presentViewController(alert, animated: true, completion: nil)
+            presentViewController(alert, animated: true, completion: nil)
             
             // Reset UI to its initial state
-            self.viewWillAppear(false)
+            resetUIElements()
         }
     }
     
@@ -262,6 +226,7 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     
     // Return a new unique file path based on the current date/time
     func newFilePathBasedOnCurrentTime() -> NSURL!{
+        
         let currentDateTime = NSDate()
         var formatter = NSDateFormatter()
         formatter.dateFormat = "ddMMyyyy-HHmmss"
@@ -272,34 +237,65 @@ class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegate {
     
     // Update the timer label based on counter value
     func updateCounterLabel() {
+        
         ++counter
         var tempCounterTxt = ""
         
         // Minutes
-        tempCounterTxt +=  "\(counter/60)"
+        tempCounterTxt +=  "\(counter / 60)"
         tempCounterTxt +=  ":"
         
         // Add a "0" if seconds are < 10
-        if ((counter%60) < 10){
+        if ((counter % 60) < 10){
             tempCounterTxt += "0"
         }
         
         // Seconds
-        tempCounterTxt += "\(counter%60)"
+        tempCounterTxt += "\(counter % 60)"
         lblTimer.text = tempCounterTxt
+    }
+    
+    // Set UI Objects to their initial status
+    func resetUIElements(){
+        
+        // Set "initial" values
+        lblTimer.text = "00:00"                     // Re-initialise timer
+        lblRecordingStatus.text = "Tap to record !" // Re-initialise status
+        btnRecord.alpha = 1.0                       // Re-initialise record button opacity
+        counter = 0                                 // Re-initialise the counter
+        lblTimer.text = "0:00"                      // Set timer label to default value
+        
+        // Enable-Disable interractive outlet(s) (Buttons, text fields, ...)
+        // @ Enabled
+        btnRecord.enabled = true
+        btnPause.enabled = true
+        btnStop.enabled = true
+        // @ Disabled
+        btnResume.enabled = false
+        
+        // Show-Hide outlet(s)
+        // @ Visible
+        btnRecord.hidden = false
+        lblRecordingStatus.hidden = false
+        // @ Hidden
+        lblTimer.hidden = true
+        btnPause.hidden = true
+        btnStop.hidden = true
+        btnResume.hidden = true
     }
     
     
     
     // MARK: Prepare for Segue
-    // **********************
+    // ***********************
+        
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         
         // If manual segue is "gotoPlaySoundsViewController"
         if (segue.identifier == "gotoPlaySoundsViewController"){
             
             // Define the new controller and pass the audiofile as external parameter
-            let playSoundVC:PlaySoundsViewController = segue.destinationViewController as! PlaySoundsViewController
+            let playSoundVC: PlaySoundsViewController = segue.destinationViewController as! PlaySoundsViewController
             let data = sender as! AVAudioFile?
             playSoundVC.audioFile = data
         }
