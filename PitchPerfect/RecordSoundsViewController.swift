@@ -82,7 +82,7 @@ final class RecordSoundsViewController: UIViewController, AVAudioRecorderDelegat
         flashViewWithFadingTransition(btnRecord)
         
         // Setup and start an audio session
-        var audioSession = AVAudioSession.sharedInstance()
+        let audioSession = AVAudioSession.sharedInstance()
         audioSession.setCategory(AVAudioSessionCategoryRecord, error: nil)
         
         // Setup recorder for m4a file format.

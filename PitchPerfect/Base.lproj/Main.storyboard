@@ -414,7 +414,7 @@
                                     </mask>
                                 </variation>
                                 <connections>
-                                    <action selector="playEcho:" destination="oNz-h3-Mb9" eventType="touchUpInside" id="q17-W8-gPJ"/>
+                                    <action selector="playEcho:" destination="oNz-h3-Mb9" eventType="touchUpInside" id="Hd9-wp-LpI"/>
                                 </connections>
                             </button>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="BTF-rP-WOr">
@@ -871,12 +871,6 @@
                     <connections>
                         <outlet property="btnStop" destination="p1f-EN-q3a" id="UTh-e5-Hyp"/>
                         <outlet property="lblPlayingStatus" destination="wDR-hJ-moU" id="PNF-sV-7T6"/>
-                        <outletCollection property="btnsEffect" destination="BTF-rP-WOr" collectionClass="NSMutableArray" id="KbM-AI-Cmc"/>
-                        <outletCollection property="btnsEffect" destination="Z36-P9-G92" collectionClass="NSMutableArray" id="Uvr-x6-Uws"/>
-                        <outletCollection property="btnsEffect" destination="UAx-B8-1ar" collectionClass="NSMutableArray" id="9X3-We-C10"/>
-                        <outletCollection property="btnsEffect" destination="D4U-Gh-Gwi" collectionClass="NSMutableArray" id="56S-as-b9L"/>
-                        <outletCollection property="btnsEffect" destination="MY0-hE-MwT" collectionClass="NSMutableArray" id="BNZ-Ru-Uit"/>
-                        <outletCollection property="btnsEffect" destination="o1i-Ib-8g4" collectionClass="NSMutableArray" id="n1Y-oe-Ptm"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="2zu-hP-LKg" userLabel="First Responder" sceneMemberID="firstResponder"/>
