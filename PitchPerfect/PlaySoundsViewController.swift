@@ -90,13 +90,11 @@ final class PlaySoundsViewController: UIViewController {
 
     @IBAction func playSlow(sender: UIButton) {
         // Info : As changing the speedRate using AVAudioUnitVarispeed also modify the pitch, I increase the pitch effect value to 1200 to recover normal voice pitch level.
-        // TODO :Source :
         playSoundWithEffects("Playing... Slow",speedRate: 0.5,pitch: 1200, reverb: nil, echo: nil)
     }
     
     @IBAction func playFast(sender: UIButton) {
         // Info : As changing the speedRate using AVAudioUnitVarispeed also modify the pitch, I decrease the pitch effect value to -700 to recover normal voice pitch level.
-        // TODO :Source :
         playSoundWithEffects("Playing... Fast",speedRate: 1.5,pitch: -700, reverb: nil, echo: nil)
     }
     
@@ -227,6 +225,7 @@ final class PlaySoundsViewController: UIViewController {
     
     // Show & Enable the stop button, change the text label and animate it
     func updateUIForPlaying(labelText: String){
+        
         // Enable stop button
         btnStop.enabled = true
         btnStop.hidden = false
